@@ -14,7 +14,14 @@ var TokenNode = function(parseTree, token) {
   self.childIds = token.child_ids;
 
   // collapse noun chunks, hide subtree if collapsed
-  self.collapsed = token.noun_chunk_head;
+  self.collapsed = (
+    token.noun_chunk_head ||
+    token.dep == 'xcomp' ||
+    token.dep == 'acomp' ||
+    token.dep == 'ccomp' ||
+    token.dep == 'advcl' ||
+    token.dep == 'prep'
+  );
 
   // set head, children
   self.head = parseTree.getTokenNode(self.headId);
