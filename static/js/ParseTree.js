@@ -47,21 +47,41 @@ var ParseTree = function() {
       return response.json();
     })
     .then(function(json) {
-      console.log(json)
-      // self.tokenNodes = []
-      // tokens.forEach(function(token) {
-      //   if (token.dep == 'ROOT') {
-      //     self.importSubtree(tokens, token);
-      //     self.renderSubtree(self.getTokenNode(token.id));
-      //   }
-      // });
-      //
-      // // remove additional nodes
-      // self.nodes.getIds().forEach(function(id) {
-      //   if (!self.getTokenNode(id)) {
-      //     self.nodes.remove(id);
-      //   }
-      // });
+      console.log(json);
+      sentences = json.sentences;
+      predictions = json.predictions;
+      for (var i = 0; i < sentences.length; i++) {
+        self.nodes.update({
+          id: i,
+          label: sentences[i],
+          title: sentences[i]
+        });
+      }
+      for (var i = 0; i < predictions.length; i++) {
+        var p = predictions[i];
+        if (p.neutral < .2) {
+          var title = 'e' + p.entailment.toFixed(1) +
+            '-c' + p.contradiction.toFixed(1) +
+            '-n' + p.neutral.toFixed(1)
+          self.edges.update({
+            id: i,
+            from: p.premise,
+            to: p.hypothesis,
+            label: ((p.entailment + (1 - p.contradiction)) / 2).toFixed(1).toString(),
+            title: title,
+            arrows: 'to',
+            physics: false,
+            width: (1 - p.neutral) * 2
+          });
+        }
+      }
+
+      // remove additional nodes
+      self.nodes.getIds().forEach(function(id) {
+        if (id >= sentences.length) {
+          self.nodes.remove(id);
+        }
+      });
     });
   };
 

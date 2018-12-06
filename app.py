@@ -34,13 +34,13 @@ def parse():
             if (premise != hypothesis):
                 prediction = predictor.predict(hypothesis=hypothesis.text, premise = premise.text)
                 entailment, contradiction, neutral = prediction['label_probs']
-                predictions += {
+                predictions += [{
                     'premise': premise_n,
                     'hypothesis': hypothesis_n,
                     'entailment': entailment,
                     'contradiction': contradiction,
                     'neutral': neutral
-                    }
+                    }]
             hypothesis_n += 1
         premise_n += 1
     return jsonify({'sentences': sentences, 'predictions': predictions})
