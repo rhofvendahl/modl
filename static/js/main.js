@@ -30,5 +30,5 @@ window.onload = function() {
 
   setInterval(function() {
     parseTree.process(input.value)
-  }, 2000);
+  }, 5000);
 }
