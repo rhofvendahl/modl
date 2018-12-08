@@ -2,7 +2,7 @@ import spacy
 import textacy
 
 print('loading en_coref_md...')
-nlp = spacy.load('en_coref_med')
+nlp = spacy.load('en_coref_md')
 print('...done')
 
 
@@ -10,6 +10,7 @@ print('...done')
 # for now assuming all names are unique identifiers
 class Person:
     statements = []
+    self.resolved_refs = None
 
     def __init__(self, name, pronouns=None, refs=[], user=False):
         self.name = name
@@ -32,13 +33,19 @@ class Model:
     text = None
     doc = None
     people = []
+    resolved_text = None
+    resolved_doc = None
 
     def __init__(self, text):
         self.text = text
         self.doc = self.get_doc()
         self.people = self.get_people()
+        self.resolved_text = self.get_resolved()
+        self.resolved_doc = self.get_doc(self.resolved_text)
 
-    def get_doc(self, text=self.text):
+    def get_doc(self, text=None):
+        if text == None:
+            text = self.text
         preprocessed = textacy.preprocess.normalize_whitespace(text)
         preprocessed = textacy.preprocess.preprocess_text(preprocessed, fix_unicode=True, no_contractions=True, no_accents=True)
         doc = nlp(preprocessed)
@@ -49,7 +56,15 @@ class Model:
                 mention.merge()
         return doc
 
-    def get_people(self, doc=self.doc):
+        def get_person_by_name(self, name):
+            for person in self.people:
+                if person.name == name:
+                    return person
+                    return None
+
+    def get_people(self, doc=None):
+        if doc == None:
+            doc = self.doc
         namedrops = [ent for ent in doc.ents if ent.label_ == 'PERSON']
         names = set([namedrop.text for namedrop in namedrops])
         people = []
@@ -80,13 +95,7 @@ class Model:
                     people += [person]
         return people
 
-    def get_person_by_name(self, name):
-        for person in self.people:
-            if person.name == name:
-                return person
-                return None
-
-    def get_resolved(self, doc=self.doc):
+    def resolve(self):
         tokens = [token.text for token in doc]
 
         for person in self.people:
@@ -94,25 +103,26 @@ class Model:
 
                 # determine resolved value
                 resolved = person.name
-                if ref.root.pos == 'ADJ':
+                if mention.root.pos_ == 'ADJ':
                     resolved += '\'s'
 
                 # set first token to resolved value
-                tokens[ref.start] = resolved
+                tokens[mention.start] = resolved
 
-                # set extra tokens in ref to blank
-                for i in range(ref.start+1, ref.end):
+                # set extra tokens in mention to blank
+                for i in range(mention.start+1, mention.end):
                     tokens[i] = ''
+
         return ' '.join([token for token in tokens if token != ''])
 
-    def update_people_statements(self, doc):
-        res = nlp(self.resolve_people(doc))
-
-        for person in model.people:
-            statements = []
-            for ref in person.refss:
-                head = ref.root.head
-                if head.pos_ == 'VERB':
-                    for statement in textacy.extract.semistructured_statements(res, person.name, head.lemma_):
-                        statements += [statement]
-            person.statements = list(set(statements))
+    # def update_people_statements(self, doc):
+    #     res = nlp(self.resolve_people(doc))
+    #
+    #     for person in model.people:
+    #         statements = []
+    #         for ref in person.refs:
+    #             head = ref.root.head
+    #             if head.pos_ == 'VERB':
+    #                 for statement in textacy.extract.semistructured_statements(res, person.name, head.lemma_):
+    #                     statements += [statement]
+    #         person.statements = list(set(statements))
