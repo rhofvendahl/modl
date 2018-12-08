@@ -10,7 +10,7 @@ print('...done')
 # for now assuming all names are unique identifiers
 class Person:
     statements = []
-    self.resolved_refs = None
+    resolved_refs = []
 
     def __init__(self, name, pronouns=None, refs=[], user=False):
         self.name = name
@@ -40,27 +40,26 @@ class Model:
         self.text = text
         self.doc = self.get_doc()
         self.people = self.get_people()
-        self.resolved_text = self.get_resolved()
-        self.resolved_doc = self.get_doc(self.resolved_text)
+        self.resolve()
 
     def get_doc(self, text=None):
         if text == None:
             text = self.text
         preprocessed = textacy.preprocess.normalize_whitespace(text)
         preprocessed = textacy.preprocess.preprocess_text(preprocessed, fix_unicode=True, no_contractions=True, no_accents=True)
-        doc = nlp(preprocessed)
+        return nlp(preprocessed)
 
         # merge mentions into tokens for easy coref tracking, resolution
-        for cluster in doc._.coref_clusters:
-            for mention in cluster.mentions:
-                mention.merge()
-        return doc
+        # for cluster in doc._.coref_clusters:
+        #     for mention in cluster.mentions:
+        #         mention.merge()
+        # return doc
 
-        def get_person_by_name(self, name):
-            for person in self.people:
-                if person.name == name:
-                    return person
-                    return None
+    def get_person_by_name(self, name):
+        for person in self.people:
+            if person.name == name:
+                return person
+        return None
 
     def get_people(self, doc=None):
         if doc == None:
@@ -80,40 +79,54 @@ class Model:
 
             if name != None:
                 person = self.get_person_by_name(name)
-                refs = [mention.head.i for mention in cluster.mentions]
                 if person == None:
-                    person = Person(name, refs=refs)
+                    person = Person(name, refs=cluster.mentions)
                     people += [person]
                 else:
-                    person.refs += refs
+                    person.refs += cluster.mentions
 
             # for named entities without clusters (single mentions)
-            for name_mention in name_mentions:
+            for name_mention in namedrops:
                 person = self.get_person_by_name(name_mention.text)
                 if person == None:
-                    person = Person(name_mention.text, refs=[name_mention.head.i])
+                    person = Person(name_mention.text, refs=[name_mention])
                     people += [person]
         return people
 
-    def resolve(self):
+    def get_resolved_text(self, doc=None):
+        if doc == None:
+            doc = self.doc
         tokens = [token.text for token in doc]
-
         for person in self.people:
             for ref in person.refs:
 
                 # determine resolved value
-                resolved = person.name
-                if mention.root.pos_ == 'ADJ':
-                    resolved += '\'s'
+                resolved_token = person.name
+                if ref.root.pos_ == 'ADJ':
+                    resolved_token += '\'s'
 
                 # set first token to resolved value
-                tokens[mention.start] = resolved
+                tokens[ref.start] = resolved_token
 
                 # set extra tokens in mention to blank
-                for i in range(mention.start+1, mention.end):
+                for i in range(ref.start+1, ref.end):
                     tokens[i] = ''
-
         return ' '.join([token for token in tokens if token != ''])
+
+    def resolve(self):
+        self.resolved_text = self.get_resolved_text()
+        self.resolved_doc = nlp(self.resolved_text)
+
+        offset = 0;
+        for person in self.people:
+            for ref in person.refs:
+                resolved_ref = self.resolved_doc[ref.start-offset:ref.end-offset]
+                person.resolved_refs += [resolved_ref]
+
+                # increase offset for each multi-word ref
+                words_in_ref = (ref.end - ref.start)
+                offset += words_in_ref - 1
+
 
     # def update_people_statements(self, doc):
     #     res = nlp(self.resolve_people(doc))
