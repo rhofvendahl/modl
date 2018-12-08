@@ -1,37 +1,40 @@
 window.onload = function() {
-  // model = new Model();
+  visual = new Visual();
 
-  var input = document.getElementById('page');
-  input.focus();
-  input.selectionStart = input.value.length;
-  input.selectionEnd = input.value.length;
+  var page = document.getElementById('page');
+  console.log(page);
+  page.focus();
+  // page.selectionStart = page.value.length;
+  // page.selectionEnd = page.value.length;
+  // visual.update(page.value);
 
-  // model.update(input.value);
+  var dirty = false;
+  var overload = 0;
+  var minUpdateInterval = 500
 
-  // // don't update constantly if timeOuts overlap
-  // var timeOuts = 0;
-  document.oninput = function(event) {
-    // event.which?
-    console.log(event.code)
-    // if (event.code == )
-    // var updated = false;
-    // if (timeOuts == 0) {
-    //   parseTree.process(input.value);
-    //   var updated = true;
-    // }
-    // timeOuts += 1
-    // setTimeout(function() {
-    //   timeOuts -= 1;
-    //   if (timeOuts == 0 && !updated) parseTree.process(input.value);
-    // }, 100)
+  page.onkeydown = function(event) {
+    var dirty = true;
+    var char = event.which || event.keyCode;
+    console.log(char)
+
+    // if whitespace (space or enter) & not overloaded
+    if ((char == 32 || char == 13) && overload == 0) {
+      visual.update(page.value)
+      dirty = false;
+    }
+
+    // keep track of overload to prevent too many api calls
+    overload += 1
+    setTimeout(function() {
+      overload -= 1;
+    }, minUpdateInterval)
   };
-  //
-  // // update at intervals if timeOuts overlap
-  // setInterval(function() {
-  //   if (timeOuts > 1) parseTree.process(input.value)
-  // }, 100);
 
-  // setInterval(function() {
-  //   model.update(input.value);
-  // }, 3000);
-}
+  // periodically update if needed (dirty)
+  setInterval(function() {
+    if (dirty) {
+      parseTree.process(input.value);
+      dirty = false;
+    }
+  }, minUpdateInterval);
+};
