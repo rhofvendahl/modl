@@ -1,13 +1,13 @@
 var Visual = function() {
   var self = this;
-  //
-  // self.nodes = new vis.DataSet();
-  // self.edges = new vis.DataSet();
-  //
-  // var container = document.getElementById('visual');
-  // var data = {nodes: self.nodes, edges: self.edges};
-  // var options = {};
-  // self.network = new vis.Network(container, data, options);
+
+  self.nodes = new vis.DataSet();
+  self.edges = new vis.DataSet();
+
+  var container = document.getElementById('visual');
+  var data = {nodes: self.nodes, edges: self.edges};
+  var options = {};
+  self.network = new vis.Network(container, data, options);
 
   // self.tokenNodes = []
   //
@@ -41,51 +41,59 @@ var Visual = function() {
   //// BELONS HERE
   // PROCESS QUERY, DISPLAY RESULTS
   self.update = function(text) {
-    fetch('/model?text=' + text)
-    .then(function(response) {
-      return response.json();
+    fetch('/model', {
+      method: 'post',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text
+      })
     })
-    .then(function(json) {
-      console.log(json);
-
-
-      var resolved = document.getElementById('resolved');
-      resolved.innerHTML = json.resolved;
-      // sentences = json.sentences;
-      // predictions = json.predictions;
-      // for (var i = 0; i < sentences.length; i++) {
-      //   self.nodes.update({
-      //     id: i,
-      //     label: sentences[i],
-      //     title: sentences[i]
-      //   });
-      // }
-      // for (var i = 0; i < predictions.length; i++) {
-      //   var p = predictions[i];
-      //   if (p.neutral < .2) {
-      //     var title = 'e' + p.entailment.toFixed(1) +
-      //       '-c' + p.contradiction.toFixed(1) +
-      //       '-n' + p.neutral.toFixed(1)
-      //     self.edges.update({
-      //       id: i,
-      //       from: p.premise,
-      //       to: p.hypothesis,
-      //       label: ((p.entailment + (1 - p.contradiction)) / 2).toFixed(1).toString(),
-      //       title: title,
-      //       arrows: 'to',
-      //       physics: false,
-      //       width: (1 - p.neutral) * 2
-      //     });
-      //   }
-      // }
-      //
-      // // remove additional nodes
-      // self.nodes.getIds().forEach(function(id) {
-      //   if (id >= sentences.length) {
-      //     self.nodes.remove(id);
-      //   }
-      // });
-    });
+    // .then(function(response) {
+    //   return response.json();
+    // })
+    // .then(function(json) {
+    //   console.log(json);
+    //   names = json.names;
+    //   resolved_text = json.resolved;
+    //
+    //   var resolved = document.getElementById('resolved');
+    //   resolved.innerHTML = resolved_text;
+    //
+    //   for (var i = 0; i < names.length; i++) {
+    //     self.nodes.update({
+    //       id: i,
+    //       label: names[i]
+    //     });
+    //   }
+    //   // for (var i = 0; i < predictions.length; i++) {
+    //   //   var p = predictions[i];
+    //   //   if (p.neutral < .2) {
+    //   //     var title = 'e' + p.entailment.toFixed(1) +
+    //   //       '-c' + p.contradiction.toFixed(1) +
+    //   //       '-n' + p.neutral.toFixed(1)
+    //   //     self.edges.update({
+    //   //       id: i,
+    //   //       from: p.premise,
+    //   //       to: p.hypothesis,
+    //   //       label: ((p.entailment + (1 - p.contradiction)) / 2).toFixed(1).toString(),
+    //   //       title: title,
+    //   //       arrows: 'to',
+    //   //       physics: false,
+    //   //       width: (1 - p.neutral) * 2
+    //   //     });
+    //   //   }
+    //   // }
+    //
+    //   // remove additional nodes
+    //   self.nodes.getIds().forEach(function(id) {
+    //     if (id >= names.length) {
+    //       self.nodes.remove(id);
+    //     }
+    //   });
+    // });
   };
 
   //// BELONGS HERE

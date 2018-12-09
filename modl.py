@@ -41,7 +41,6 @@ class Model:
         self.extract_people()
 
         self.resolved = self.get_resolved()
-        print([person.refs for person in self.people])
 
     def get_person_by_name(self, name):
         for person in self.people:
