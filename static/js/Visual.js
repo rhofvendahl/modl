@@ -51,49 +51,55 @@ var Visual = function() {
         text: text
       })
     })
-    // .then(function(response) {
-    //   return response.json();
-    // })
-    // .then(function(json) {
-    //   console.log(json);
-    //   names = json.names;
-    //   resolved_text = json.resolved;
-    //
-    //   var resolved = document.getElementById('resolved');
-    //   resolved.innerHTML = resolved_text;
-    //
-    //   for (var i = 0; i < names.length; i++) {
-    //     self.nodes.update({
-    //       id: i,
-    //       label: names[i]
-    //     });
-    //   }
-    //   // for (var i = 0; i < predictions.length; i++) {
-    //   //   var p = predictions[i];
-    //   //   if (p.neutral < .2) {
-    //   //     var title = 'e' + p.entailment.toFixed(1) +
-    //   //       '-c' + p.contradiction.toFixed(1) +
-    //   //       '-n' + p.neutral.toFixed(1)
-    //   //     self.edges.update({
-    //   //       id: i,
-    //   //       from: p.premise,
-    //   //       to: p.hypothesis,
-    //   //       label: ((p.entailment + (1 - p.contradiction)) / 2).toFixed(1).toString(),
-    //   //       title: title,
-    //   //       arrows: 'to',
-    //   //       physics: false,
-    //   //       width: (1 - p.neutral) * 2
-    //   //     });
-    //   //   }
-    //   // }
-    //
-    //   // remove additional nodes
-    //   self.nodes.getIds().forEach(function(id) {
-    //     if (id >= names.length) {
-    //       self.nodes.remove(id);
-    //     }
-    //   });
-    // });
+    .then(function(response) {
+      return response.json();
+    })
+    .then(function(json) {
+      console.log(json);
+
+      var resolved = document.getElementById('resolved');
+      resolved.innerHTML = json.model.resolved_text;
+
+      var newIds = []
+      var people = json.model.people
+      console.log(people.length)
+      for (var i = 0; i < people.length; i++) {
+        var person = people[i];
+        var personId = 'people/' + person.name;
+        newIds.push(personId);
+        self.nodes.update({
+          id: personId,
+          label: person.name
+        });
+
+        var statements = person.statements
+        for (var j = 0; j < statements.length; j++) {
+          var statement = statements[j];
+          var statementId = 'people/' + person.name + '/statements/' + j
+          newIds.push(statementId);
+          self.nodes.update({
+            id: statementId,
+            label: statement.cue + ' - ' + statement.fragment
+          });
+          self.edges.update({
+            id: statementId,
+            to: personId,
+            from: statementId
+          })
+        }
+      }
+
+      // remove additional nodes
+      self.nodes.getIds().forEach(function(id) {
+        remove = true
+        newIds.forEach(function(newId) {
+          if (id == newId) remove = false;
+        });
+        if (remove) {
+          self.nodes.remove(id);
+        }
+      });
+    });
   };
 
   //// BELONGS HERE
