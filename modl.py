@@ -1,10 +1,10 @@
-# import spacy
-# import textacy
+import spacy
+import textacy
 
 
-# print('loading en_coref_md...')
-# nlp = spacy.load('en_coref_md')
-# print('...done')
+print('loading en_coref_md...')
+nlp = spacy.load('en_coref_sm')
+print('done')
 
 
 
@@ -41,6 +41,7 @@ class Model:
         preprocessed = textacy.preprocess.normalize_whitespace(text)
         preprocessed = textacy.preprocess.preprocess_text(preprocessed, fix_unicode=True, no_contractions=True, no_accents=True)
         self.doc = nlp(preprocessed)
+        print(self.doc.text)
         self.extract_people()
         self.resolved = self.get_resolved()
 
@@ -57,30 +58,31 @@ class Model:
         names = set([namedrop.text for namedrop in namedrops])
 
         # for clusters that include namedrops
-        for cluster in doc._.coref_clusters:
-            name = None
+        if doc._.coref_clusters != None:
+            for cluster in doc._.coref_clusters:
+                name = None
 
-            for mention in cluster.mentions:
-                mention_text = mention.root.text
-                if mention_text in names:
-                    name = mention_text
+                for mention in cluster.mentions:
+                    mention_text = mention.root.text
+                    if mention_text in names:
+                        name = mention_text
 
-            if name != None:
-                person = self.get_person_by_name(name)
-                if person == None:
-                    person = Person(name, refs=cluster.mentions)
-                    self.people += [person]
-                else:
-                    person.refs = list(set(person.refs + cluster.mentions))
+                if name != None:
+                    person = self.get_person_by_name(name)
+                    if person == None:
+                        person = Person(name, refs=cluster.mentions)
+                        self.people += [person]
+                    else:
+                        person.refs = list(set(person.refs + cluster.mentions))
 
-            # for named entities without clusters (single mentions)
-            for name_mention in namedrops:
-                person = self.get_person_by_name(name_mention.text)
-                if person == None:
-                    person = Person(name_mention.text, refs=[name_mention])
-                    self.people += [person]
-                else:
-                    person.refs = list(set(person.refs + cluster.mentions))
+        # for named entities without clusters (single mentions)
+        for namedrop in namedrops:
+            person = self.get_person_by_name(namedrop.text)
+            if person == None:
+                person = Person(namedrop.text, refs=[namedrop])
+                self.people += [person]
+            else:
+                person.refs = list(set(person.refs + [namedrop]))
 
 #     def get_resolved_text(self, doc=None):
 #         if doc == None:
@@ -174,8 +176,6 @@ class Model:
                     resolved_text[i] = ''
         return ''.join(resolved_text)
 
-#     def resolve(self):
-#         resolved_text = self.get_resolved_text()
     # def update_people_statements(self, doc):
     #     res = nlp(self.resolve_people(doc))
     #

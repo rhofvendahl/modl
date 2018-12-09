@@ -1,13 +1,13 @@
 var Visual = function() {
   var self = this;
-
-  self.nodes = new vis.DataSet();
-  self.edges = new vis.DataSet();
-
-  var container = document.getElementById('visual');
-  var data = {nodes: self.nodes, edges: self.edges};
-  var options = {};
-  self.network = new vis.Network(container, data, options);
+  //
+  // self.nodes = new vis.DataSet();
+  // self.edges = new vis.DataSet();
+  //
+  // var container = document.getElementById('visual');
+  // var data = {nodes: self.nodes, edges: self.edges};
+  // var options = {};
+  // self.network = new vis.Network(container, data, options);
 
   // self.tokenNodes = []
   //
@@ -41,12 +41,16 @@ var Visual = function() {
   //// BELONS HERE
   // PROCESS QUERY, DISPLAY RESULTS
   self.update = function(text) {
-    fetch('/update?text=' + text)
+    fetch('/model?text=' + text)
     .then(function(response) {
       return response.json();
     })
     .then(function(json) {
       console.log(json);
+
+
+      var resolved = document.getElementById('resolved');
+      resolved.innerHTML = json.resolved;
       // sentences = json.sentences;
       // predictions = json.predictions;
       // for (var i = 0; i < sentences.length; i++) {

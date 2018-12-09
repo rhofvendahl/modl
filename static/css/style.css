@@ -7,8 +7,11 @@ body {
 }
 
 #page {
+  position: absolute;
+  left: 0px;
+  top: 0px;
   width: 50%;
-  height: 99%;
+  height: 100%;
   background-color:  whitesmoke;
   outline: 0px;
   resize: none;
@@ -16,9 +19,22 @@ body {
   padding: 0px;
 }
 
-#visual {
+#resolved {
+  position: absolute;
+  right: 0px;
+  top: 0px;
   width: 50%;
-  height: 100%;
+  height: 50%;
+  float: right;
+  background-color: lightgrey;
+}
+
+#visual {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
+  width: 50%;
+  height: 50%;
   float: right;
 }
 
