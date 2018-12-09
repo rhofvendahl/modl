@@ -10,34 +10,27 @@ window.onload = function() {
 
   var dirty = false;
   var overload = 0;
-  var minUpdateInterval = 100
-  var maxUpdateInterval = 1000
+  var maxUpdateFrequency = 10;
 
-  page.onkeypress = function(event) {
-    char = event.which || event.charCode
+  page.oninput = function(event) {
     dirty = true;
 
-    // if ws (space or enter) & not overloaded
-    if ((char == 32 || char == 13) && overload == 0) {
-      console.log('updating because ws')
+    // update if not overloaded
+    if (overload == 0) {
       visual.update(page.value)
       dirty = false;
 
-      // keep track of overload to prevent too many api calls
+      // increment overload for a bit after updating
       overload += 1
       setTimeout(function() {
         overload -= 1;
-      }, minUpdateInterval)
-    }
 
+        // update after waiting in case dirty
+        if (dirty) {
+          visual.update(page.value);
+          dirty = false;
+        }
+      }, 1000 / maxUpdateFrequency)
+    }
   };
-
-  // periodically update if needed (dirty)
-  setInterval(function() {
-    if (dirty) {
-      console.log('updating because dirty')
-      visual.update(page.value);
-      dirty = false;
-    }
-  }, maxUpdateInterval);
 };
