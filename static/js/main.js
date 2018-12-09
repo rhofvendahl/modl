@@ -10,7 +10,7 @@ window.onload = function() {
 
   var dirty = false;
   var overload = 0;
-  var maxUpdateFrequency = 10;
+  var maxUpdateFrequency = 2;
 
   page.oninput = function(event) {
     dirty = true;

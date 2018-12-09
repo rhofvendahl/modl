@@ -10,7 +10,7 @@ print('done')
 
 # for now assuming all names are unique identifiers
 class Person:
-    statements = []
+    # statements = []
 #     resolved_refs = []
 
     def __init__(self, name, refs=[]):
@@ -31,19 +31,17 @@ class Person:
 # MEMORYLESS FOR NOW; each change to text means a whole new model
 # Set extensions later, for keeping track of which tokens are what
 class Model:
-    raw = None
-    doc = None
-    people = []
-    resolved = None
-
     def __init__(self, text):
-        raw = text
+        self.raw = text
         preprocessed = textacy.preprocess.normalize_whitespace(text)
         preprocessed = textacy.preprocess.preprocess_text(preprocessed, fix_unicode=True, no_contractions=True, no_accents=True)
         self.doc = nlp(preprocessed)
-        print(self.doc.text)
+
+        self.people = []
         self.extract_people()
+
         self.resolved = self.get_resolved()
+        print([person.refs for person in self.people])
 
     def get_person_by_name(self, name):
         for person in self.people:
@@ -70,8 +68,7 @@ class Model:
                 if name != None:
                     person = self.get_person_by_name(name)
                     if person == None:
-                        person = Person(name, refs=cluster.mentions)
-                        self.people += [person]
+                        self.people += [Person(name, refs=cluster.mentions)]
                     else:
                         person.refs = list(set(person.refs + cluster.mentions))
 
@@ -79,81 +76,21 @@ class Model:
         for namedrop in namedrops:
             person = self.get_person_by_name(namedrop.text)
             if person == None:
-                person = Person(namedrop.text, refs=[namedrop])
-                self.people += [person]
+                self.people += [Person(namedrop.text, refs=[namedrop])]
             else:
                 person.refs = list(set(person.refs + [namedrop]))
 
-#     def get_resolved_text(self, doc=None):
-#         if doc == None:
-#             doc = self.doc
-#         tokens = [token.text for token in doc]
-#         for person in self.people:
-#             for ref in person.refs:
-
-#                 # determine resolved value
-#                 resolved_token = person.name
-#                 if ref.root.pos_ == 'ADJ':
-#                     resolved_token += '\'s'
-
-#                 # set first token to resolved value
-#                 tokens[ref.start] = resolved_token
-
-#                 # set extra tokens in mention to blank
-#                 for i in range(ref.start+1, ref.end):
-#                     tokens[i] = ''
-#         return ' '.join([token for token in tokens if token != ''])
-
-#     def resolve(self):
-#         self.resolved_text = self.get_resolved_text()
-#         self.resolved_doc = nlp(self.resolved_text)
-
-#         offset = 0;
-#         for person in self.people:
-#             for ref in person.refs:
-#                 resolved_ref = self.resolved_doc[ref.start-offset:ref.start-offset+1]
-#                 person.resolved_refs += [resolved_ref]
-
-#                 # increase offset for each multi-word ref
-#                 words_in_ref = (ref.end - ref.start)
-#                 offset += words_in_ref - 1
-#     def resolve(self):
-
-#         # create resolved text
-#         chars = list(self.doc.text)
-#         chars_inserted_before = 0
-#         for person in self.people:
-#             for ref in person.refs:
-
-#                 # determine resolved value
-#                 resolved = person.name
-#                 if ref.root.pos_ == 'ADJ':
-#                     resolved += '\'s'
-#                 if ref.text_with_ws[-1] = ' ':
-#                     resolved += ' '
-
-
-#                 # set appropriate chars to resolved value
-#                 new_start = ref.start_char + chars_inserted_before
-#                 new_end = ref.end_char + chars_inserted_before
-#                 print(chars_inserted_before, new_start, new_end, chars[new_start:new_end], list(resolved))
-#                 chars[new_start:new_end] = list(resolved)
-#                 chars_inserted_before += len(resolved) - len(ref.text)
-
-#         self.resolved_doc = nlp(''.join(chars))
-
-#         # create list with original text but resolved token index
-#         merged_copy = copy(self.doc)
-#         for person in self.people:
-#             for ref in person.refs:
-#                 merged_copy.char_span(ref.start_char, ref.end_char).merge()
-
-#         # use merged_copy to translate refs to resolved_refs
-#         for person in self.people:
-#             for ref in person.refs:
-#                 resolved_i = merged_copy.char_span(ref.char_start, ref.char_end)
-#                 resolved_ref = self.resolved_doc[resolved_i]
-#                 person.resolved_refs = list(set(person.resolved_refs + resolved_ref))
+        # for user (first person refs)
+        refs = []
+        for token in doc:
+            pronoun = token.tag_ in ['PRP', 'PRP$']
+            first_person = token.text.lower() in ['i', 'me', 'my', 'mine', 'myself']
+            if pronoun and first_person:
+                start = token.i - token.n_lefts
+                end = token.i + token.n_rights + 1
+                ref = doc[start:end]
+                refs += [ref]
+        self.people += [Person('User', refs)]
 
     def get_resolved(self, doc=None):
         if doc == None:
@@ -164,8 +101,8 @@ class Model:
             for ref in person.refs:
 
                 # determine resolved value
-                resolved_value = person.name
-                if ref.root.pos_ == 'ADJ':
+                resolved_value = '[' + person.name.upper() + ']'
+                if ref.root.tag_ == 'PRP$':
                     resolved_value += '\'s'
                 if ref.text_with_ws[-1] == ' ':
                     resolved_value += ' '
