@@ -34,3 +34,5 @@ window.onload = function() {
     }
   };
 };
+
+// at some point make it so it sends a new request as soon as the old is resolved, or a bit after
