@@ -13,23 +13,21 @@ def model():
     model = Model(content['text'])
 
     model_dict = {
-        'text': model.doc.text,
-        'resolved_text': model.resolved_text,
-        'people': []
+        'entities': [{
+            'id': entity.id,
+            'text': entity.text,
+            'class': entity.class_
+        } for entity in model.entities],
+        'statements': [{
+            'id': statement.id,
+            'subject_text': statement.subject_text,
+            'subject_id': statement.subject_id,
+            'predicate_text': statement.predicate_text,
+            'object_text': statement.object_text,
+            'object_id': statement.object_id,
+            'weight': statement.weight
+        } for statement in model.statements],
     }
-    for person in model.people:
-        person_dict = {
-            'name': person.name,
-            'statements': []
-        }
-        for entity, cue, fragment in person.statements:
-            statement_dict = {
-                'entity': entity.text,
-                'cue': cue.text,
-                'fragment': fragment.text
-            }
-            person_dict['statements'] += [statement_dict]
-        model_dict['people'] += [person_dict]
     return jsonify({'model': model_dict})
 
 if __name__ == "__main__":
