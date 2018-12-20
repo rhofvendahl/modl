@@ -28,6 +28,17 @@ def model():
             'weight': statement.weight
         } for statement in model.statements],
     }
+    # for entity in model_dict['entities']:
+    #     print(type(entity['text']))
+    #     print()
+    # for s in model_dict['statements']:
+    #     print(type(s['subject_text']))
+    #     print(type(s['predicate_text']))
+    #     print(type(s['object_text']))
+    #     print()
+    print('ent_length', len(model.doc.ents))
+    for ent in model.doc.ents:
+        print(ent.text, ent.label_)
     return jsonify({'model': model_dict})
 
 if __name__ == "__main__":

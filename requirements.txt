@@ -3,3 +3,5 @@ gunicorn
 requests
 spacy==2.0.13 # bc later versions don't work with neuralcoref
 textacy
+torch
+allennlp

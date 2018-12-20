@@ -17,8 +17,12 @@ Span.set_extension('entity_id', default=None, force=True)
 archive = load_event2mind_archive('data/event2mind.tar.gz')
 event2mind_predictor = Predictor.from_archive(archive)
 
-print('loading en_coref_md...')
-nlp = spacy.load('en_coref_md')
+# print('loading en_coref_sm...')
+# nlp = spacy.load('en_coref_sm')
+# print('done')
+
+print('loading en_coref_sm...')
+nlp = spacy.load('en_coref_sm')
 print('done')
 
 class Entity:
@@ -54,6 +58,7 @@ class Model:
 #         self.resolved_doc = nlp(self.resolved_text)
 
         self.user = None
+        # TODO: named entity recognition sometimes doesn't recognize people? add in a name recognizer.
         self.entities = []
         self.extract_user_entity()
         self.extract_coref_entities()
@@ -61,7 +66,8 @@ class Model:
         # create entities for the rest of the noun chunks
         for noun_chunk in self.noun_chunks:
             if noun_chunk._.entity_id == None:
-                entity = Entity(id_=len(self.entities), text=noun_chunk.text, class_='THING')
+                entity = Entity(id_=len(self.entities), text=noun_chunk.text, class_='THINGfromnchunk')
+                # print('noun chunk to entity', entity.text, entity.class_)
                 self.entities.append(entity)
                 noun_chunk._.entity_id = entity.id
 
@@ -115,48 +121,50 @@ class Model:
                     return span # TODO: what if there are somehow multiple named entities with same root as mention?
             return None
 
-        for cluster in self.doc._.coref_clusters:
+        if self.doc._.coref_clusters != None:
+            for cluster in self.doc._.coref_clusters:
 
-            # find named entity w same root as main mention
-            entity_ref = get_match(cluster.main, self.named_entities)
+                # find named entity w same root as main mention
+                entity_ref = get_match(cluster.main, self.named_entities)
 
-            # else find named entity w same root as any mention
-            if entity_ref == None:
-                for mention in cluster.mentions:
-                    entity_ref = get_match(mention, self.named_entities) # TODO: what if different mentions have different entities?
+                # else find named entity w same root as any mention
+                if entity_ref == None:
+                    for mention in cluster.mentions:
+                        entity_ref = get_match(mention, self.named_entities) # TODO: what if different mentions have different entities?
 
-            # else use main mention for named entity match
-            if entity_ref == None:
-                entity_ref = cluster.main
+                # else use main mention for named entity match
+                if entity_ref == None:
+                    entity_ref = cluster.main
 
-            # don't work with corefs that are user or don't have noun chunk
-            # TODO: is it dumb to not work with corefs that don't have noun chunk?
-            not_user = entity_ref.root.text.lower() not in ['i', 'me', 'myself'] #TODO: replace with something that doesn't allow duplicate entities (unless I want them order independent?)
-            nc_match = get_match(entity_ref, self.noun_chunks) # TODO: if no nc matched it might be possessive or something, in which case add that then 'belong to'
-            if not_user and nc_match != None:
-                text = entity_ref
-                if entity_ref.label_ == '':
-                    class_ = 'THING'
-                else:
-                    class_ = entity_ref.label_
+                # don't work with corefs that are user or don't have noun chunk
+                # TODO: is it dumb to not work with corefs that don't have noun chunk?
+                not_user = entity_ref.root.text.lower() not in ['i', 'me', 'myself'] #TODO: replace with something that doesn't allow duplicate entities (unless I want them order independent?)
+                nc_match = get_match(entity_ref, self.noun_chunks) # TODO: if no nc matched it might be possessive or something, in which case add that then 'belong to'
+                if not_user and nc_match != None:
+                    text = entity_ref.text
+                    if entity_ref.label_ == '':
+                        class_ = 'THINGfromcoref'
+                    else:
+                        class_ = entity_ref.label_
 
-                id_ = len(self.entities)
-                entity = Entity(id_=id_, text = text, class_=class_)
-                self.entities.append(entity)
+                    id_ = len(self.entities)
+                    entity = Entity(id_=id_, text = text, class_=class_)
+                    self.entities.append(entity)
 
-                # TODO: I'm setting some of these twice - is that bad?
-                for mention in cluster.mentions:
-                    if mention.root.pos_ in ['NOUN', 'PROPN', 'PRON']:
+                    # TODO: I'm setting some of these twice - is that bad?
+                    for mention in cluster.mentions:
+                        if mention.root.pos_ in ['NOUN', 'PROPN', 'PRON']:
 
-                        # only set extension for mentions with noun chunk matches
-                        # TODO: is it dumb to set extension for noun chunk, not direct? it's usually the same..when is it not?
-                        nc_match = get_match(mention, self.noun_chunks)
-                        if nc_match != None:
-                            nc_match._.entity_id = entity.id
+                            # only set extension for mentions with noun chunk matches
+                            # TODO: is it dumb to set extension for noun chunk, not direct? it's usually the same..when is it not?
+                            nc_match = get_match(mention, self.noun_chunks)
+                            if nc_match != None:
+                                nc_match._.entity_id = entity.id
 
     # TODO: needs fine tuning, strips a lot out and adds some that shouldn't be
     def extract_statements(self, span, previous_subject=None, previous_predicate=None):
         # TODO: I think sometimes conjunctions are missing predicates? maybe not
+        # TODO: some subjects are 'they' or 'mary and sue' - split into two statements, one for each.
         first, last = textacy.spacier.utils.get_span_for_verb_auxiliaries(span.root)
         beginning = self.doc[span.start:first]
         middle = self.doc[first:last+1]
@@ -190,7 +198,7 @@ class Model:
         # TODO: process the verb phrase a little to consolidate statements
         # use textacy's consolidate?
         predicate = middle
-        print(predicate.text)
+        # print(predicate.text)
 
         conjuncted = None
         for token in end:
@@ -204,9 +212,9 @@ class Model:
         while self.doc[object_.end-1].dep_ in ['cc', 'punct']:
             object_ = self.doc[object_.start:object_.end-1]
 
-        print(span)
-        print(subject, '-', predicate, '-', object_)
-        print()
+        # print(span)
+        # print(subject, '-', predicate, '-', object_)
+        # print()
 
         if subject != None and predicate != None:
             if predicate.text == '\'s':
@@ -248,10 +256,12 @@ class Model:
         for statement in self.statements:
              if statement.subject_id != None:
                 subject_entity = self.get_entity(statement.subject_id)
+                print(subject_entity.text)
                 if subject_entity != None and subject_entity.class_ == 'PERSON':
                     person_statements.append(statement)
-
+        print()
         for statement in person_statements:
+            subject_entity = self.get_entity(statement.subject_id)
             prediction = event2mind_predictor.predict(
               source='PersonX ' + str(statement.predicate_text) + ' ' + str(statement.object_text)
             )
@@ -271,7 +281,7 @@ class Model:
                     object_id = None,
                     weight = p
                 )
-                print(statement.id, statement.subject_text, statement.predicate_text, statement.object_text)
+                # print(statement.id, statement.subject_text, statement.predicate_text, statement.object_text)
                 print(feels_statement.id, feels_statement.subject_text, feels_statement.predicate_text, feels_statement.object_text, round(feels_statement.weight, 2))
                 self.statements.append(feels_statement)
 
