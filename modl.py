@@ -172,28 +172,31 @@ class Model:
 
         # if beginning has nsubj token and that token is in a noun chunk, set noun chunk as subject entity
         # assumes there aren't two nsubj in beginning, safe?
-        subject = None
+        subjects = []
         for token in beginning:
-            if token.dep_ == 'nsubj':
-                for noun_chunk in self.noun_chunks:
-                    if noun_chunk.root == token:
-                        subject = noun_chunk
-                        break
-                else:
-                    # so that every subject has an entity
-                    # TODO: but not all objects have entities
-                    entity = Entity(id_=len(self.entities), text = token.text, class_=None)
-                    self.entities.append(entity)
-                    subject = self.doc[token.i:token.i+1]
+            # token gets added as a subject no matter what
+            # for now assumes that all noun chunks get added, as well as all with dep_ 'subj'
+            # if token.dep_ == 'nsubj':
+            is_chunk = False
+            for noun_chunk in self.noun_chunks:
+                if noun_chunk.root == token:
+                    is_chunk = True
                     break
-
+            if is_chunk or token.dep_ == 'nsubj':
+                # so that every subject has an entity
+                # TODO: but not all objects have entities
+                subject = self.doc[token.i:token.i+1]
+                if subject._.entity_id == None:
+                    entity = Entity(id_=len(self.entities), text = subject.text, class_=None)
+                    self.entities.append(entity)
+                subjects.append(subject)
 
         # TODO: just use it if you can't find noun chunk
 
         # if this is being called on remainder (conjunction) with no subject, use previous subject
         # eg 'I need to drink, and to drink': 'and to eat' borrows 'I' for subject
-        if subject == None and previous_subject != None:
-            subject = previous_subject
+        if len(subjects) == 0 and previous_subject != None:
+            subjects.append(previous_subject)
 
         # TODO: process the verb phrase a little to consolidate statements
         # use textacy's consolidate?
@@ -216,7 +219,7 @@ class Model:
         # print(subject, '-', predicate, '-', object_)
         # print()
 
-        if subject != None and predicate != None:
+        if len(subjects) > 0 and predicate != None:
             if predicate.text == '\'s':
                 predicate_text = 'is'
             else:
@@ -225,19 +228,22 @@ class Model:
                 object_text = None
             else:
                 object_text = object_.text
-            statement = Statement(
-                id_=len(self.statements),
-                subject_text = subject.text,
-                subject_id = subject._.entity_id, # sometimes None, is that bad form?
-                predicate_text = predicate.text,
-                object_text = object_text,
-                object_id = None, # for now, later might extract entity from subject phrase
-                weight = None
-            )
-            self.statements.append(statement)
+            print('subjects', subjects)
+            for subject in subjects:
+                statement = Statement(
+                    id_=len(self.statements),
+                    subject_text = subject.text,
+                    subject_id = subject._.entity_id, # sometimes None, is that bad form?
+                    predicate_text = predicate.text,
+                    object_text = object_text,
+                    object_id = None, # for now, later might extract entity from subject phrase
+                    weight = None
+                )
+                self.statements.append(statement)
 
-        if conjuncted != None:
-            self.extract_statements(conjuncted, previous_subject=subject)
+                # TODO: this might make duplicates if multiple subjects, fix that
+                if conjuncted != None:
+                    self.extract_statements(conjuncted, previous_subject=subject)
 
     def generate_event2mind_statements(self):
         # TODO: sub PersonY for people in subject
@@ -256,10 +262,8 @@ class Model:
         for statement in self.statements:
              if statement.subject_id != None:
                 subject_entity = self.get_entity(statement.subject_id)
-                print(subject_entity.text)
                 if subject_entity != None and subject_entity.class_ == 'PERSON':
                     person_statements.append(statement)
-        print()
         for statement in person_statements:
             subject_entity = self.get_entity(statement.subject_id)
             prediction = event2mind_predictor.predict(
