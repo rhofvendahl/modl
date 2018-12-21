@@ -17,13 +17,13 @@ Span.set_extension('entity_id', default=None, force=True)
 archive = load_event2mind_archive('data/event2mind.tar.gz')
 event2mind_predictor = Predictor.from_archive(archive)
 
-# print('loading en_coref_sm...')
-# nlp = spacy.load('en_coref_sm')
-# print('done')
-
 print('loading en_coref_sm...')
 nlp = spacy.load('en_coref_sm')
 print('done')
+
+# print('loading en_coref_sm...')
+# nlp = spacy.load('en_coref_sm')
+# print('done')
 
 class Entity:
     def __init__(self, id_, text, class_):
@@ -32,7 +32,7 @@ class Entity:
         self.class_ = class_
 
 class Statement:
-    def __init__(self, id_, subject_text, predicate_text, subject_id=None, object_text=None, object_id=None, weight=None):
+    def __init__(self, id_, subject_text, predicate_text, subject_id=None, object_text=None, object_id=None, statement_text=None, keyphrase_text=None):
         self.id = id_
         self.subject_text = subject_text
         self.subject_id = subject_id
@@ -40,6 +40,16 @@ class Statement:
         self.object_text = object_text
         self.object_id = object_id
         self.weight = weight
+        self.statement_text = statement_text
+        self.keyphrase_text = keyphrase_text
+
+class Inference:
+    def __init__(self, id_, from, to, weight, source):
+        self.id = id_
+        self.from = from
+        self.to = to
+        self.weight = weight
+        self.source = source
 
 # memoryless for now; each change to text means a whole new model
 class Model:
@@ -75,6 +85,8 @@ class Model:
         self.statements = []
         for sent in self.doc.sents:
             self.extract_statements(sent)
+
+        self.inferences = []
         self.generate_event2mind_statements()
 
 
@@ -276,18 +288,36 @@ class Model:
             ):
                 emotion = ' '.join(emotion)
                 p = math.exp(log_p)
+
                 feels_statement = Statement(
-                    id_=len(self.statements),
+                    id_ = len(self.statements),
                     subject_text = subject_entity.text,
                     subject_id = subject_entity.id,
                     predicate_text = 'feels',
                     object_text = emotion,
                     object_id = None,
-                    weight = p
+                    weight = p,
                 )
+                feels_statement.statement_text = feels_statement.subject_text + ' ' +
+                                                 feels_statement.predicate_text + ' ' +
+                                                 feels_statement.subject_text
                 # print(statement.id, statement.subject_text, statement.predicate_text, statement.object_text)
                 print(feels_statement.id, feels_statement.subject_text, feels_statement.predicate_text, feels_statement.object_text, round(feels_statement.weight, 2))
                 self.statements.append(feels_statement)
+
+                inference = Inference(
+                    id_ = len(self.inferences),
+                    to = feels_statement.id,
+                    from = statement.id,
+                    weight = p,
+                    source = 'event2mind'
+                )
+                self.inferences.append(inference)
+
+    # def generate_emotional_inferences(self):
+    #     emotions = [statement.subject_text for statement in self.statements if statement.predicate_text == 'feels']
+    #     for emotion in emotions:
+
 
 #     def get_resolved_text(self):
 #         resolved_text = [token.text_with_ws for token in self.doc]

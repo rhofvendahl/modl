@@ -25,20 +25,17 @@ def model():
             'predicate_text': statement.predicate_text,
             'object_text': statement.object_text,
             'object_id': statement.object_id,
-            'weight': statement.weight
+            'statement_text': statement.statement_text,
+            'kephrase_text': statement.keyphrase_text
         } for statement in model.statements],
+        'inferences': [{
+            'id': inference.id,
+            'from': inference.from,
+            'to': inference.to,
+            'weight': inference.weight,
+            'source': inference.source
+        } for inference in model.inferences]
     }
-    # for entity in model_dict['entities']:
-    #     print(type(entity['text']))
-    #     print()
-    # for s in model_dict['statements']:
-    #     print(type(s['subject_text']))
-    #     print(type(s['predicate_text']))
-    #     print(type(s['object_text']))
-    #     print()
-    print('ent_length', len(model.doc.ents))
-    for ent in model.doc.ents:
-        print(ent.text, ent.label_)
     return jsonify({'model': model_dict})
 
 if __name__ == "__main__":
